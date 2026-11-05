@@ -1,0 +1,21 @@
+qb_id,invoice_number,customer,invoice_date,due_date,total_amount,balance,qb_status,days_past_due,bucket
+130,1037,Sonnenschein Family Store,2026-10-10,2026-11-09,362.07,362.07,Open,-4,Current
+129,1036,0969 Ocean View Road,2026-10-10,2026-11-09,477.5,477.5,Open,-4,Current
+119,1035,Mark Cho,2026-10-10,2026-11-09,314.28,314.28,Open,-4,Current
+106,1034,Rondonuwu Fruit and Vegi,2026-10-09,2026-11-08,78.6,78.6,Open,-3,Current
+103,1033,Geeta Kalapatapu,2026-10-09,2026-11-08,629.1,629.1,Open,-3,Current
+67,1021,Amy's Bird Sanctuary,2026-09-18,2026-10-18,459.0,239.0,Partially Paid,18,1-30
+99,1032,Travis Waldron,2026-10-07,2026-11-06,414.72,414.72,Open,-1,Current
+68,1022,Jeff's Jalopies,2026-09-18,2026-10-18,81.0,81.0,Open,18,1-30
+13,1005,55 Twin Lane,2026-10-01,2026-10-31,54.0,4.0,Partially Paid,5,1-30
+92,1028,55 Twin Lane,2026-08-23,2026-09-22,81.0,81.0,Open,44,31-60
+75,1027,Bill's Windsurf Shop,2026-08-23,2026-09-22,85.0,85.0,Open,44,31-60
+70,1024,Red Rock Diner,2026-08-02,2026-09-01,156.0,156.0,Open,65,61-90
+69,1023,Red Rock Diner,2026-10-08,2026-11-07,70.0,70.0,Open,-2,Current
+65,1019,Sushi by Katsuyuki,2026-10-08,2026-11-07,80.0,80.0,Open,-2,Current
+64,1018,Sushi by Katsuyuki,2026-10-01,2026-10-31,80.0,80.0,Open,5,1-30
+60,1016,Kookies by Kathy,2026-08-22,2026-09-21,75.0,75.0,Open,45,31-60
+49,1015,Paulsen Medical Supplies,2026-10-08,2026-11-07,954.75,954.75,Open,-2,Current
+39,1012,Barnett Design,2026-09-26,2026-10-26,274.5,274.5,Open,10,1-30
+34,1010,Weiskopf Consulting,2026-10-08,2026-11-07,375.0,375.0,Open,-2,Current
+16,1007,John Melton,2026-09-15,2026-10-15,750.0,450.0,Partially Paid,21,1-30

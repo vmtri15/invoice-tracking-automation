@@ -1,0 +1,8 @@
+.env
+.venv/
+__pycache__/
+.pytest_cache/
+# extracted API data: could be real data in live mode
+data/extracted/
+# your real Sheet export
+ledger.csv

@@ -1,0 +1,26 @@
+invoice_number,customer,issue_type,sheet_amount,qb_amount,sheet_status,qb_status,amount_at_risk,detail
+INV-1011,Tidewater Textiles,AMOUNT_MISMATCH,1486.93,1416.12,Open,Partially Paid,70.81,"Sheet 1,486.93 vs QuickBooks 1,416.12 (diff +70.81)"
+INV-1069,Maple and Finch Bakery,AMOUNT_MISMATCH,2007.77,1912.16,Paid,Paid,95.61,"Sheet 2,007.77 vs QuickBooks 1,912.16 (diff +95.61)"
+INV-1109,Ironwood Furniture,AMOUNT_MISMATCH,1111.61,1058.68,Paid,Paid,52.93,"Sheet 1,111.61 vs QuickBooks 1,058.68 (diff +52.93)"
+INV-1130,Cobalt Freight Co,AMOUNT_MISMATCH,6183.43,6870.48,Paid,Paid,687.05,"Sheet 6,183.43 vs QuickBooks 6,870.48 (diff -687.05)"
+INV-1140,Eastgate Foods,AMOUNT_MISMATCH,13115.49,13805.78,Paid,Paid,690.29,"Sheet 13,115.49 vs QuickBooks 13,805.78 (diff -690.29)"
+INV-1148,Harbor Light Marine,AMOUNT_MISMATCH,3542.86,3374.15,Open,Open,168.71,"Sheet 3,542.86 vs QuickBooks 3,374.15 (diff +168.71)"
+INV-1099,Maple and Finch Bakery,DUPLICATE_IN_SHEET,7758.37,,Open,,7758.37,Entered 2 times in the Sheet; first entry used for matching
+INV-1112,Kestrel Aviation Parts,DUPLICATE_IN_SHEET,1667.43,,Open,,1667.43,Entered 2 times in the Sheet; first entry used for matching
+INV-1128,Granite Peak Builders,DUPLICATE_IN_SHEET,4988.46,,Paid,,4988.46,Entered 2 times in the Sheet; first entry used for matching
+INV-1010,Juniper Analytics,MISSING_IN_QB,1303.67,,Open,,1303.67,"In the Sheet, not in QuickBooks"
+INV-1076,Oakline Pharmacy,MISSING_IN_QB,1958.66,,Paid,,1958.66,"In the Sheet, not in QuickBooks"
+INV-1118,Cobalt Freight Co,MISSING_IN_QB,2695.9,,Paid,,2695.9,"In the Sheet, not in QuickBooks"
+INV-1184,Juniper Analytics,MISSING_IN_QB,2822.68,,Open,,2822.68,"In the Sheet, not in QuickBooks"
+INV-1199,Bluebird Dental Group,MISSING_IN_QB,2042.61,,Open,,2042.61,"In the Sheet, not in QuickBooks"
+INV-1012,Cobalt Freight Co,MISSING_IN_SHEET,,6806.28,,Paid,6806.28,"In QuickBooks, not in the Sheet"
+INV-1013,Redwater Brewing,MISSING_IN_SHEET,,6120.25,,Paid,6120.25,"In QuickBooks, not in the Sheet"
+INV-1053,Eastgate Foods,MISSING_IN_SHEET,,11713.06,,Partially Paid,11713.06,"In QuickBooks, not in the Sheet"
+INV-1082,Bluebird Dental Group,MISSING_IN_SHEET,,2902.19,,Paid,2902.19,"In QuickBooks, not in the Sheet"
+INV-1083,Summit Cycle Shop,MISSING_IN_SHEET,,1363.75,,Paid,1363.75,"In QuickBooks, not in the Sheet"
+INV-1024,Bluebird Dental Group,STATUS_MISMATCH,5613.48,5613.48,Open,Paid,5613.48,"Sheet says Open, QuickBooks says Paid (balance 0.00)"
+INV-1059,Granite Peak Builders,STATUS_MISMATCH,2794.7,2794.7,Open,Paid,2794.7,"Sheet says Open, QuickBooks says Paid (balance 0.00)"
+INV-1068,Harbor Light Marine,STATUS_MISMATCH,5959.12,5959.12,Open,Paid,5959.12,"Sheet says Open, QuickBooks says Paid (balance 0.00)"
+INV-1127,Pinecrest Schools,STATUS_MISMATCH,4873.4,4873.4,Open,Paid,4873.4,"Sheet says Open, QuickBooks says Paid (balance 0.00)"
+INV-1169,Tidewater Textiles,STATUS_MISMATCH,2603.09,2603.09,Paid,Open,2603.09,"Sheet says Paid, QuickBooks says Open (balance 2,603.09)"
+INV-1197,Redwater Brewing,STATUS_MISMATCH,1145.35,1145.35,Paid,Open,1145.35,"Sheet says Paid, QuickBooks says Open (balance 1,145.35)"
