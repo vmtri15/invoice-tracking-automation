@@ -179,6 +179,8 @@ QuickBooks has no "status" field. Status is worked out from `Balance`: 0 means P
    ```
    The script asks Google for read-only access and reads the `Form Responses 1` tab exactly as displayed.
 
+Troubleshooting, all seen during setup: *"Service account key creation is disabled"* means the project sits under a Google Cloud organization with Secure-by-Default policies; use a project with "No organization". A `403 ... API has not been used` means the Sheets API is off in *that* project. A `403 The caller does not have permission` means the Sheet isn't shared with the service account yet.
+
 Secrets live only in `.env`, `secrets/` (both git-ignored) and in Apps Script Script Properties.
 
 ## Accounting notes: the journal entries behind the data
