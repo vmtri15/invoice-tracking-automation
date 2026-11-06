@@ -6,3 +6,7 @@ __pycache__/
 data/extracted/
 # your real Sheet export
 ledger.csv
+# Google service account key
+secrets/
+# live run output (could contain real company data)
+reports/live/

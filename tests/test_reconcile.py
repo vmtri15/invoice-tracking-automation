@@ -63,3 +63,37 @@ def test_sample_data_finds_exactly_the_planted_problems(tmp_path):
     issues = reconcile(load_sheet(SAMPLE / "simulated_ledger_sheet.csv"), inv)
     planted = pd.read_csv(SAMPLE / "simulated_planted_problems.csv")
     assert set(zip(issues.invoice_number, issues.issue_type)) == set(zip(planted.invoice_number, planted.problem))
+
+
+def test_google_sheet_read_uses_displayed_values(monkeypatch):
+    import sys
+    import types
+
+    rows = [["Timestamp", "Customer", "Invoice Number", "Invoice Date", "Due Date", "Amount", "Status", "Validation"],
+            ["11/5/2026 17:36:07", "Test Co", "INV-1", "10/1/2026", "10/15/2026", "$1,500.00", "Open", "OK"]]
+    seen = {}
+
+    class Sheet:
+        def worksheet(self, tab):
+            seen["tab"] = tab
+            return types.SimpleNamespace(get_all_values=lambda: rows)
+
+    def service_account(filename, scopes):
+        seen["key"], seen["scopes"] = filename, scopes
+        return types.SimpleNamespace(open_by_key=lambda key: seen.setdefault("id", key) and Sheet())
+
+    monkeypatch.setitem(sys.modules, "gspread", types.SimpleNamespace(service_account=service_account))
+    from src.reconcile import load_google_sheet
+
+    df = load_google_sheet("SHEET123", "key.json")
+    assert df.to_dict("records") == [{"customer": "Test Co", "invoice_number": "INV-1", "amount": 1500.0, "status": "Open"}]
+    assert seen["id"] == "SHEET123" and seen["tab"] == "Form Responses 1"
+    assert seen["scopes"] == ["https://www.googleapis.com/auth/spreadsheets.readonly"]  # read-only access
+
+
+def test_sheet_with_renamed_column_fails_clearly():
+    import pytest
+    from src.reconcile import clean_sheet
+
+    with pytest.raises(SystemExit, match="Invoice Number"):
+        clean_sheet(pd.DataFrame({"Customer": ["A"], "Invoice #": ["1"], "Amount": ["5"], "Status": ["Open"]}))

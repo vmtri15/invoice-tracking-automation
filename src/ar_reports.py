@@ -10,6 +10,7 @@ import math
 
 import pandas as pd
 
+from .charts import aging_chart, ar_trend_chart
 from .common import SIM_BANNER, fmt_money, md_table
 
 BUCKETS = ["Current", "1-30", "31-60", "61-90", "90+"]
@@ -52,8 +53,28 @@ def month_end_summary(inv: pd.DataFrame, pay: pd.DataFrame, as_of) -> pd.DataFra
                        "collected": collected.reindex(months, fill_value=0.0)})
     df["closing_ar"] = (df["invoiced"] - df["collected"]).cumsum()
     df["opening_ar"] = df["closing_ar"].shift(fill_value=0.0)
+    # Collection rate: share of what customers owed this month (opening + new invoices) that was collected.
+    owed = df["opening_ar"] + df["invoiced"]
+    df["collection_rate_pct"] = (df["collected"] / owed * 100).where(owed > 0).round(1)
+    # DSO (simple method): closing AR / sales in the period x days in the period. The current month counts to as-of.
+    days = [(min(m.end_time.normalize(), as_of) - m.start_time).days + 1 for m in months]
+    df["dso_days"] = (df["closing_ar"] / df["invoiced"] * days).where(df["invoiced"] > 0).round(1)
     df.index = df.index.astype(str)
-    return df.rename_axis("month").reset_index()[["month", "opening_ar", "invoiced", "collected", "closing_ar"]].round(2)
+    return df.rename_axis("month").reset_index()[["month", "opening_ar", "invoiced", "collected", "closing_ar",
+                                                  "collection_rate_pct", "dso_days"]].round(2)
+
+
+# Illustrative reserve rates: the older the balance, the less likely it is collected.
+# ponytail: fixed rates for a portfolio demo; a real company sets them from its own write-off history.
+RESERVE_RATES = {"Current": 0.01, "1-30": 0.03, "31-60": 0.10, "61-90": 0.25, "90+": 0.50}
+
+
+def allowance(summary: pd.DataFrame) -> pd.DataFrame:
+    """Allowance for doubtful accounts by aging bucket (the 'aging method')."""
+    out = summary[["bucket", "balance"]].copy()
+    out["reserve_rate_pct"] = out["bucket"].map(RESERVE_RATES) * 100
+    out["allowance"] = (out["balance"] * out["bucket"].map(RESERVE_RATES)).round(2)
+    return out
 
 
 def write_ar_reports(inv, pay, as_of, out_dir, simulated) -> str:
@@ -64,19 +85,52 @@ def write_ar_reports(inv, pay, as_of, out_dir, simulated) -> str:
     summary.to_csv(out_dir / "ar_aging_summary.csv", index=False)
     by_cust.to_csv(out_dir / "ar_aging_by_customer.csv", index=False)
     month_end.to_csv(out_dir / "month_end_summary.csv", index=False)
+    reserve = allowance(summary)
+    reserve.to_csv(out_dir / "allowance_for_doubtful_accounts.csv", index=False)
+    (out_dir / "charts").mkdir(exist_ok=True)
+    note = " | SIMULATED DATA" if simulated else ""
+    aging_chart(summary, out_dir / "charts" / "ar_aging.png", note)
+    ar_trend_chart(month_end, out_dir / "charts" / "ar_trend.png", note)
 
     aging_total = round(summary["balance"].sum(), 2)
     closing = month_end["closing_ar"].iloc[-1]
     tie = ("ties" if abs(closing - aging_total) < 0.01
            else f"does NOT tie (difference {closing - aging_total:,.2f}: look for credit memos, unapplied cash or dates after as-of)")
+    allow_total = round(reserve["allowance"].sum(), 2)
+    active = month_end[month_end["invoiced"] > 0]
+    last = (active if len(active) else month_end).iloc[-1]  # latest month with sales; an empty month gives no DSO
+    past_due = summary.loc[summary["bucket"] != "Current", "balance"].sum()
+
+    def kpi(v, unit):
+        return "n/a" if pd.isna(v) else f"{v:,.1f}{unit}"
+
+    me_md = month_end.astype(object).where(month_end.notna(), "n/a")
     md = "\n".join([
         f"# AR report as of {pd.Timestamp(as_of).date()}", "", SIM_BANNER if simulated else "",
+        "## Key metrics", "",
+        "| Metric | Value |", "|---|---|",
+        f"| Gross open AR | ${aging_total:,.2f} |",
+        f"| Past due (1+ days) | ${past_due:,.2f} ({kpi(past_due / aging_total * 100 if aging_total else float('nan'), '%')}) |",
+        f"| Allowance for doubtful accounts | ${allow_total:,.2f} |",
+        f"| Net realizable AR | ${aging_total - allow_total:,.2f} |",
+        f"| DSO, {last['month']} | {kpi(last['dso_days'], ' days')} |",
+        f"| Collection rate, {last['month']} | {kpi(last['collection_rate_pct'], '%')} |", "",
+        "![AR aging chart](charts/ar_aging.png)", "", "![AR trend chart](charts/ar_trend.png)", "",
         "## AR aging (open balances, days past due date)", "",
         md_table(fmt_money(summary, ["balance"])), "", f"**Total open AR: ${aging_total:,.2f}**", "",
         "## Top 5 customers by open balance", "",
         md_table(fmt_money(by_cust.head(5), BUCKETS + ["Total"])), "",
         "## Month-end summary (AR roll-forward)", "",
-        md_table(fmt_money(month_end, ["opening_ar", "invoiced", "collected", "closing_ar"])), "",
-        f"Tie-out: closing AR ${closing:,.2f} vs aging total ${aging_total:,.2f}: **{tie}**.", ""])
+        md_table(fmt_money(me_md, ["opening_ar", "invoiced", "collected", "closing_ar"])), "",
+        f"Tie-out: closing AR ${closing:,.2f} vs aging total ${aging_total:,.2f}: **{tie}**.", "",
+        "DSO = closing AR / invoiced in the month x days in the month. "
+        "Collection rate = collected / (opening AR + invoiced).", "",
+        "## Allowance for doubtful accounts (aging method)", "",
+        md_table(fmt_money(reserve, ["balance", "allowance"])), "",
+        "Reserve rates are illustrative assumptions, not company history. "
+        "Proposed month-end entry (assuming the allowance starts at zero):", "",
+        "| Account | Debit | Credit |", "|---|---|---|",
+        f"| Bad Debt Expense | {allow_total:,.2f} | |",
+        f"| Allowance for Doubtful Accounts | | {allow_total:,.2f} |", ""])
     (out_dir / "ar_report.md").write_text(md)
     return md

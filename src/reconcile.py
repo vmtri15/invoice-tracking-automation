@@ -22,12 +22,33 @@ COLS = ["invoice_number", "customer", "issue_type", "sheet_amount", "qb_amount",
         "qb_status", "amount_at_risk", "detail"]
 
 
+SHEET_COLUMNS = {"Customer": "customer", "Invoice Number": "invoice_number", "Amount": "amount", "Status": "status"}
+
+
+def clean_sheet(df: pd.DataFrame) -> pd.DataFrame:
+    """Same cleaning whether the Sheet comes from a CSV export or straight from Google."""
+    missing = [c for c in SHEET_COLUMNS if c not in df.columns]
+    if missing:
+        raise SystemExit(f"Sheet is missing column(s) {missing}. Expected the Form's headers: {list(SHEET_COLUMNS)}")
+    df = df.rename(columns=SHEET_COLUMNS)
+    df["amount"] = to_money(df["amount"])
+    return df[list(SHEET_COLUMNS.values())]
+
+
 def load_sheet(path) -> pd.DataFrame:
     """Read the CSV exported from the Google Sheet (File > Download > CSV)."""
-    df = pd.read_csv(path, dtype=str).rename(columns={
-        "Customer": "customer", "Invoice Number": "invoice_number", "Amount": "amount", "Status": "status"})
-    df["amount"] = to_money(df["amount"])
-    return df[["customer", "invoice_number", "amount", "status"]]
+    return clean_sheet(pd.read_csv(path, dtype=str))
+
+
+def load_google_sheet(sheet_id, key_file, tab="Form Responses 1") -> pd.DataFrame:
+    """Read the Sheet live through the Google Sheets API with a service account (read-only)."""
+    import gspread  # only needed for the live read
+
+    gc = gspread.service_account(filename=key_file, scopes=["https://www.googleapis.com/auth/spreadsheets.readonly"])
+    rows = gc.open_by_key(sheet_id).worksheet(tab).get_all_values()  # values as displayed, like the CSV export
+    if not rows:
+        raise SystemExit(f"Tab '{tab}' is empty")
+    return clean_sheet(pd.DataFrame(rows[1:], columns=rows[0]))
 
 
 def _norm(s: pd.Series) -> pd.Series:

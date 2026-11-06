@@ -1,11 +1,14 @@
 # Invoice Tracking Automation
 
+[![tests](https://github.com/vmtri15/invoice-tracking-automation/actions/workflows/tests.yml/badge.svg)](https://github.com/vmtri15/invoice-tracking-automation/actions/workflows/tests.yml)
+
 A small accounts receivable (AR) automation project. Invoices are logged through a Google Form,
 validated and chased automatically, reconciled against QuickBooks Online, and summarized in
 month-end AR reports.
 
-> **All data in this repo is SIMULATED.** `data/sample/` and the files in `reports/` come from
-> `src/generate_sample_data.py`. They do not describe a real company.
+> **No real company data is in this repo.** `data/sample/` and the top-level files in `reports/` are
+> SIMULATED (from `src/generate_sample_data.py`). `reports/sandbox_run/` comes from Intuit's sandbox
+> sample company plus test invoices entered through the Form.
 
 ## The business problem (a controller's view)
 
@@ -22,7 +25,27 @@ This project automates those checks:
 | Overdue alerts | Every morning, unpaid invoices past their due date are posted to Slack | `apps_script/Code.gs` |
 | Extract | Invoices and payments are pulled from the QuickBooks Online API (OAuth 2.0) into CSV | `src/quickbooks_client.py` |
 | Reconciliation | Sheet vs QuickBooks: missing on either side, amount differences, status differences, duplicates | `src/reconcile.py` |
-| Reporting | AR aging (Current / 1-30 / 31-60 / 61-90 / 90+) and a month-end AR roll-forward | `src/ar_reports.py` |
+| Reporting | AR aging (Current / 1-30 / 31-60 / 61-90 / 90+), month-end AR roll-forward, DSO, collection rate, allowance for doubtful accounts, charts | `src/ar_reports.py`, `src/charts.py` |
+| Quality | 16 pytest tests plus a full mock pipeline run on every push (GitHub Actions) | `tests/`, `.github/workflows/` |
+
+![AR aging](reports/charts/ar_aging.png)
+
+![AR roll-forward](reports/charts/ar_trend.png)
+
+*(Charts from the simulated data. Live sandbox charts are in [reports/sandbox_run/charts](reports/sandbox_run/charts/).)*
+
+## Key AR metrics (what the report adds for a controller)
+
+| Metric | Formula | Simulated result (Oct 2026) |
+|---|---|---|
+| DSO (days sales outstanding) | closing AR / invoiced in the month × days in the month | 51.5 days |
+| Collection rate | collected / (opening AR + invoiced) | 40.6% |
+| Past due share | balance 1+ days past due / total open AR | 46.4% |
+| Allowance for doubtful accounts | sum of each aging bucket × a reserve rate (1%, 3%, 10%, 25%, 50%) | $13,303.23 |
+| Net realizable AR | gross AR − allowance | $185,979.94 |
+
+The report also proposes the month-end entry: **Dr Bad Debt Expense / Cr Allowance for Doubtful Accounts**.
+The reserve rates are illustrative; a real company sets them from its own write-off history.
 
 ## Architecture
 
@@ -80,6 +103,7 @@ data is Intuit's sandbox sample company; the Sheet rows are test invoices entere
 | MISSING_IN_SHEET, $7,402.55 | 29 invoices | in QuickBooks but not tracked by the team |
 
 AR aging: $5,281.52 open, 71% current, nothing 90+. The month-end roll-forward closing AR **ties** to the aging total.
+October DSO 39.9 days, collection rate 41.2%, allowance $134.51, net realizable AR $5,147.01.
 
 ## Project layout
 
@@ -90,8 +114,10 @@ src/common.py              paths and small helpers
 src/generate_sample_data.py  SIMULATED data with planted problems (fixed seed)
 src/quickbooks_client.py   QuickBooks API extract (live) or sample JSON (mock) -> data/extracted/*.csv
 src/reconcile.py           matching rules + reconciliation report
-src/ar_reports.py          aging buckets + month-end roll-forward
+src/ar_reports.py          aging, month-end roll-forward, DSO, collection rate, allowance
+src/charts.py              aging and AR trend charts (PNG)
 src/run_pipeline.py        one command for the whole pipeline
+.github/workflows/         CI: tests + mock pipeline on every push
 data/sample/               SIMULATED inputs
 reports/                   outputs (the committed copies come from simulated data)
 tests/                     hand-checked examples and edge cases
@@ -140,9 +166,20 @@ QuickBooks has no "status" field. Status is worked out from `Balance`: 0 means P
    ```bash
    .venv/bin/python -m src.run_pipeline --live --sheet path/to/ledger.csv
    ```
-   The script exchanges the refresh token for a 1-hour access token, pages through `select * from Invoice` and `select * from Payment`, and saves any rotated refresh token back to `.env`. Sandbox refresh tokens expire after about 100 days without use; get a new one from the Playground if that happens.
+   The script exchanges the refresh token for a 1-hour access token, pages through `select * from Invoice` and `select * from Payment`, and saves any rotated refresh token back to `.env`. Sandbox refresh tokens expire after about 100 days without use; get a new one from the Playground if that happens. Live output goes to `reports/live/` (git-ignored), so the simulated reports are never overwritten.
 
-Secrets live only in `.env` (git-ignored) and in Apps Script Script Properties.
+### 5. Live Google Sheet read (optional, replaces the CSV export)
+1. In https://console.cloud.google.com create a project, then **APIs & Services → Library → Google Sheets API → Enable**.
+2. **IAM & Admin → Service Accounts → Create service account** (no roles needed). Open it → **Keys → Add key → JSON**. Save the file as `secrets/google-service-account.json` (the `secrets/` folder is git-ignored).
+3. Copy the service account's email (`...@...iam.gserviceaccount.com`). In your Sheet, click **Share**, paste it, choose **Viewer**.
+4. In `.env`, set `GOOGLE_SHEET_ID` (the part of the Sheet URL between `/d/` and `/edit`).
+5. Run without `--sheet`:
+   ```bash
+   .venv/bin/python -m src.run_pipeline --live
+   ```
+   The script asks Google for read-only access and reads the `Form Responses 1` tab exactly as displayed.
+
+Secrets live only in `.env`, `secrets/` (both git-ignored) and in Apps Script Script Properties.
 
 ## Accounting notes: the journal entries behind the data
 
@@ -168,9 +205,8 @@ The month-end roll-forward is the standard AR rollforward: **opening AR + invoic
 
 ## How to explain it in an interview (30 seconds)
 
-> "Invoices come in through a Form into a Sheet. An Apps Script trigger validates each one and posts overdue invoices to Slack every morning, with the webhook kept in script properties, not in the code. A Python job pulls invoices and payments from the QuickBooks API over OAuth and reconciles them against the Sheet by invoice number. It flags missing records, amount and status differences, and duplicates, and puts a dollar figure on each. It also builds the AR aging and a month-end roll-forward that ties to the aging. I tested it on simulated data with 25 planted errors, and it catches all of them."
+> "Invoices come in through a Form into a Sheet. An Apps Script trigger validates each one and posts overdue invoices to Slack every morning, with the webhook kept in script properties, not in the code. A Python job pulls invoices and payments from the QuickBooks API over OAuth and reconciles them against the Sheet by invoice number. It flags missing records, amount and status differences, and duplicates, and puts a dollar figure on each. It also builds the AR aging and a month-end roll-forward that ties to the aging, plus DSO, collection rate and an allowance for doubtful accounts with the proposed journal entry. I tested it on simulated data with 25 planted errors, and it catches all of them."
 
 ## Limits (on purpose, to keep it simple)
-- The Sheet is read from a CSV export, not live through the Google Sheets API.
 - Payments not applied to an invoice (customer credits) and credit memos are not pulled. If you use them, the tie-out will show the difference.
 - Live mode was tested against an Intuit sandbox company (see Live results), not a production QuickBooks file.
