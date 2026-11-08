@@ -203,12 +203,3 @@ How the reconciliation maps to fixes:
 - *Amount mismatch*: compare against the source document (contract or PO). A credit memo or corrected invoice fixes QuickBooks; an edit fixes the Sheet.
 - *Duplicate*: delete the extra Sheet row so AR isn't counted twice.
 
-The month-end roll-forward is the standard AR rollforward: **opening AR + invoiced − collected = closing AR**. Closing AR must tie to the aging total; the report prints that tie-out.
-
-## How to explain it in an interview (30 seconds)
-
-> "Invoices come in through a Form into a Sheet. An Apps Script trigger validates each one and posts overdue invoices to Slack every morning, with the webhook kept in script properties, not in the code. A Python job pulls invoices and payments from the QuickBooks API over OAuth and reconciles them against the Sheet by invoice number. It flags missing records, amount and status differences, and duplicates, and puts a dollar figure on each. It also builds the AR aging and a month-end roll-forward that ties to the aging, plus DSO, collection rate and an allowance for doubtful accounts with the proposed journal entry. I tested it on simulated data with 25 planted errors, and it catches all of them."
-
-## Limits (on purpose, to keep it simple)
-- Payments not applied to an invoice (customer credits) and credit memos are not pulled. If you use them, the tie-out will show the difference.
-- Live mode was tested against an Intuit sandbox company (see Live results), not a production QuickBooks file.
