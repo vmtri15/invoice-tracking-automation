@@ -203,3 +203,4 @@ How the reconciliation maps to fixes:
 - *Amount mismatch*: compare against the source document (contract or PO). A credit memo or corrected invoice fixes QuickBooks; an edit fixes the Sheet.
 - *Duplicate*: delete the extra Sheet row so AR isn't counted twice.
 
+The month-end roll-forward is the standard AR rollforward: **opening AR + invoiced − collected = closing AR**. Closing AR must tie to the aging total; the report prints that tie-out.
